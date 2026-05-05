@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Mail, Lock, UserPlus } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import { generateKeyPair } from "@/lib/crypto";
 
@@ -48,7 +49,7 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
   return (
     <form onSubmit={handleSubmit} className="w-full max-w-md">
-      <h2 className="text-2xl font-bold mb-6">Register</h2>
+      <h2 className="text-2xl font-bold mb-6 text-black">Register</h2>
 
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
@@ -65,13 +66,14 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           required
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md   focus:ring-blue-500 text-black"
           disabled={isLoading}
         />
       </div>
 
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
+        <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+          <Mail className="w-4 h-4" />
           Email
         </label>
         <input
@@ -85,7 +87,8 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       </div>
 
       <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
+        <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+          <Lock className="w-4 h-4" />
           Password
         </label>
         <input
@@ -99,7 +102,8 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       </div>
 
       <div className="mb-6">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
+        <label className="block text-gray-700 text-sm font-bold mb-2 flex items-center gap-2">
+          <Lock className="w-4 h-4" />
           Confirm Password
         </label>
         <input
@@ -115,8 +119,9 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
       <button
         type="submit"
         disabled={isLoading}
-        className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50"
+        className="w-full bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md disabled:opacity-50 flex items-center justify-center gap-2"
       >
+        <UserPlus className="w-4 h-4" />
         {isLoading ? "Registering..." : "Register"}
       </button>
 

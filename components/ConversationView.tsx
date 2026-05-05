@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { Send, AlertCircle, Wifi } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import * as types from "@/lib/types";
 import * as api from "@/lib/api";
@@ -54,7 +55,7 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
 
   // Load messages
   useEffect(() => {
-    if (!token) return;
+    if (!token || !user) return;
 
     const loadMessages = async () => {
       try {
@@ -70,7 +71,15 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
 
         for (const msg of encryptedMessages) {
           try {
-            // Decrypt the symmetric key
+            // Only decrypt if current user is the recipient
+            // (symmetric key was encrypted with recipient's public key)
+            if (msg.recipientId !== user.id) {
+              // This is a message we sent - we have the plaintext locally
+              // Skip decryption as the symmetric key was encrypted with recipient's public key
+              continue;
+            }
+
+            // Decrypt the symmetric key with our private key
             const decryptedSymKeyBuffer = await crypto.decryptWithPrivateKey(
               crypto.base64ToArrayBuffer(msg.encryptedSymmetricKey),
               privateKey
@@ -121,7 +130,7 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
     loadMessages();
     const interval = setInterval(loadMessages, 5000); // Poll every 5 seconds
     return () => clearInterval(interval);
-  }, [token, selectedUserId, usersCache]);
+  }, [token, selectedUserId, usersCache, user]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -187,7 +196,7 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
             {recipientUser?.username || selectedUserId}
           </h2>
           <p className="text-sm text-gray-600 flex items-center gap-2">
-            <span className="inline-block w-2 h-2 bg-green-500 rounded-full"></span>
+            <Wifi className="w-4 h-4 text-green-500" />
             End-to-End Encrypted
           </p>
         </div>
@@ -195,7 +204,8 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
 
       {/* Error */}
       {error && (
-        <div className="mx-4 mt-2 p-2 bg-red-100 border border-red-400 text-red-700 text-sm rounded">
+        <div className="mx-4 mt-2 p-2 bg-red-100 border border-red-400 text-red-700 text-sm rounded flex items-center gap-2">
+          <AlertCircle className="w-4 h-4 flex-shrink-0" />
           {error}
         </div>
       )}
@@ -251,9 +261,9 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
           <button
             type="submit"
             disabled={isLoading || !messageText.trim()}
-            className="px-6 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-lg disabled:opacity-50 transition-colors"
+            className="px-6 py-2 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-lg disabled:opacity-50 transition-colors flex items-center gap-2"
           >
-            {isLoading ? "Sending..." : "Send"}
+            {isLoading ? "Sending..." : <><Send className="w-4 h-4" />Send</> }
           </button>
         </div>
       </form>

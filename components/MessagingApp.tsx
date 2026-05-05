@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import { LogOut } from "lucide-react";
 import { useAuth } from "./AuthContext";
 import * as types from "@/lib/types";
 import * as api from "@/lib/api";
@@ -69,8 +70,9 @@ export function MessagingApp() {
             </div>
             <button
               onClick={logout}
-              className="px-3 py-1 bg-red-500 hover:bg-red-700 text-white text-sm rounded"
+              className="px-3 py-1 bg-red-500 hover:bg-red-700 text-white text-sm rounded flex items-center gap-2"
             >
+              <LogOut className="w-4 h-4" />
               Logout
             </button>
           </div>

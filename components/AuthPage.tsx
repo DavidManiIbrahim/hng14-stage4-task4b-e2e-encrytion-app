@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { Lock } from "lucide-react";
 import { LoginForm } from "./LoginForm";
 import { RegisterForm } from "./RegisterForm";
 
@@ -21,7 +22,10 @@ export function AuthPage() {
       {/* Form container */}
       <div className="relative z-10 bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
         <div className="mb-8 text-center">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">🔐 E2EE Chat</h1>
+          <div className="flex justify-center mb-4">
+            <Lock className="w-12 h-12 text-blue-600" />
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">E2EE Chat</h1>
           <p className="text-gray-600">
             End-to-End Encrypted Messaging
           </p>

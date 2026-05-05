@@ -1,11 +1,12 @@
 
-:rocket: Frontend Wizards — Stage 4B
+Frontend Wizards — Stage 4B
 
-:closed_lock_with_key: Stage 4B — End-to-End Encrypted App
-:dart: Objective
+Stage 4B — End-to-End Encrypted App
+
+ Objective
 Build a secure messaging application that uses End-to-End Encryption (E2EE).
 
-:brain: What is Required
+ What is Required
 You will build a secure messaging app where:
 
 Data is encrypted on the client
@@ -13,7 +14,7 @@ Server never sees plaintext
 Only intended users can decrypt content
 
 
-:key: Core Concept
+ Core Concept
 Encryption happens:
 
 Before sending data to backend
@@ -21,7 +22,7 @@ Decryption happens on recipient device
 Backend stores only ciphertext
 
 
-:building_construction: System Architecture
+ System Architecture
 Frontend Responsibilities:
 
 Key generation
@@ -37,15 +38,15 @@ Handle authentication
 Manage encrypted key exchange
 
 
-:lock: Required Features
-:one: Authentication
+ Required Features
+ Authentication
 
 Secure login system
 Session management
 JWT or secure token-based auth
 
 
-:two: Key Management
+ Key Management
 Each user must have:
 
 Public key
@@ -57,7 +58,7 @@ Securely stored (IndexedDB or encrypted storage)
 
 
 
-:three: Encrypted Messaging or Notes
+ Encrypted Messaging or Notes
 Users should be able to:
 
 Create encrypted message
