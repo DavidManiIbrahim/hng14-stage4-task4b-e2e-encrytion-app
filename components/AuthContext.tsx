@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as types from "@/lib/types";
 
 interface AuthContextType {
@@ -101,12 +101,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("auth_user", JSON.stringify(data.user));
   };
 
-  const logout = () => {
+  const logout = useCallback(() => {
     setUser(null);
     setToken(null);
     localStorage.removeItem("auth_token");
     localStorage.removeItem("auth_user");
-  };
+  }, []);
 
   return (
     <AuthContext.Provider

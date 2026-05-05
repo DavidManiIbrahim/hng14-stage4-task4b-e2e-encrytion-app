@@ -14,7 +14,7 @@ interface ConversationViewProps {
 interface DisplayedMessage extends types.DecryptedMessage {}
 
 export function ConversationView({ selectedUserId }: ConversationViewProps) {
-  const { user, token } = useAuth();
+  const { user, token, logout } = useAuth();
   const [messages, setMessages] = useState<DisplayedMessage[]>([]);
   const [messageText, setMessageText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -46,12 +46,18 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
         const recipient = cache.get(selectedUserId);
         setRecipientUser(recipient || null);
       } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : "Failed to load users";
         console.error("Failed to load users:", err);
+        
+        // If token is invalid, log out the user
+        if (errorMessage.includes("Invalid token")) {
+          logout();
+        }
       }
     };
 
     loadUsersAndRecipient();
-  }, [selectedUserId, token]);
+  }, [selectedUserId, token, logout]);
 
   // Load messages
   useEffect(() => {
@@ -123,14 +129,20 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
 
         setMessages(decrypted.sort((a, b) => a.timestamp - b.timestamp));
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load messages");
+        const errorMessage = err instanceof Error ? err.message : "Failed to load messages";
+        setError(errorMessage);
+        
+        // If token is invalid, log out the user
+        if (errorMessage.includes("Invalid token")) {
+          logout();
+        }
       }
     };
 
     loadMessages();
     const interval = setInterval(loadMessages, 5000); // Poll every 5 seconds
     return () => clearInterval(interval);
-  }, [token, selectedUserId, usersCache, user]);
+  }, [token, selectedUserId, usersCache, user, logout]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -211,7 +223,9 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50" style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd' stroke='%23d1d5db' stroke-width='0.5' opacity='0.3'%3E%3Ccircle cx='10' cy='10' r='3'/%3E%3Cline x1='20' y1='5' x2='25' y2='15'/%3E%3Cpath d='M30 20 Q35 25 30 30'/%3E%3Ccircle cx='45' cy='15' r='2'/%3E%3Cline x1='5' y1='35' x2='15' y2='40'/%3E%3Ccircle cx='50' cy='50' r='2.5'/%3E%3Cpath d='M15 50 Q20 45 25 50'/%3E%3C/g%3E%3C/svg%3E")`
+      }}>
         {messages.length === 0 ? (
           <div className="flex items-center justify-center h-full text-gray-500">
             No messages yet. Start the conversation!
@@ -256,7 +270,7 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
             onChange={(e) => setMessageText(e.target.value)}
             placeholder="Type a message..."
             disabled={isLoading}
-            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50 text-black"
           />
           <button
             type="submit"

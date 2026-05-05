@@ -9,9 +9,9 @@ export default function Home() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-500 to-purple-600">
-        <div className="text-center text-white">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-center text-gray-800">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
           <p>Loading...</p>
         </div>
       </div>
