@@ -10,23 +10,29 @@ export function AuthPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center"
+      className="min-h-screen flex items-center justify-center p-4 bg-cover bg-center relative"
       style={{
         backgroundImage:
           "url('https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=1200&h=1200&fit=crop')",
       }}
     >
-      {/* Dark overlay */}
-      <div className="absolute inset-0 bg-black/40"></div>
+      {/* Dark overlay with blur effect */}
+      <div className="absolute inset-0 bg-black/30 backdrop-blur-sm"></div>
 
-      {/* Form container */}
-      <div className="relative z-10 bg-white rounded-lg shadow-2xl p-8 max-w-md w-full">
+      {/* Form container with glass effect */}
+      <div className="relative z-10 bg-white/30 backdrop-blur-md rounded-2xl shadow-2xl p-8 max-w-md w-full border border-white/20 hover:shadow-lg transition-shadow">
         <div className="mb-8 text-center">
           <div className="flex justify-center mb-4">
-            <Lock className="w-12 h-12 text-blue-600" />
+            <div className="p-3 rounded-full text-white shadow-lg ">
+              <img
+                src="/e2e.png"
+                alt="E2EE Chat logo"
+                className="w-40 h-40 object-contain"
+              />
+            </div>
           </div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">E2EE Chat</h1>
-          <p className="text-gray-600">
+          {/* <h1 className="text-4xl font-bold text-white mb-2 drop-shadow-lg">E2EE Chat</h1> */}
+          <p className="text-white/80 drop-shadow-md">
             End-to-End Encrypted Messaging
           </p>
         </div>

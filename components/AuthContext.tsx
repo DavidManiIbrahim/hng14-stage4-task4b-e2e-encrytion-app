@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import * as types from "@/lib/types";
+import { getCurrentUser } from "@/lib/api";
 
 interface AuthContextType {
   user: types.User | null;
@@ -26,17 +27,33 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage on mount and validate saved token
   useEffect(() => {
-    const savedToken = localStorage.getItem("auth_token");
-    const savedUser = localStorage.getItem("auth_user");
+    const restoreSession = async () => {
+      const savedToken = localStorage.getItem("auth_token");
+      const savedUser = localStorage.getItem("auth_user");
 
-    if (savedToken && savedUser) {
-      setToken(savedToken);
-      setUser(JSON.parse(savedUser));
-    }
+      if (!savedToken) {
+        setIsLoading(false);
+        return;
+      }
 
-    setIsLoading(false);
+      try {
+        const currentUser = await getCurrentUser(savedToken);
+        setToken(savedToken);
+        setUser(currentUser);
+        localStorage.setItem("auth_user", JSON.stringify(currentUser));
+      } catch (error) {
+        setToken(null);
+        setUser(null);
+        localStorage.removeItem("auth_token");
+        localStorage.removeItem("auth_user");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    restoreSession();
   }, []);
 
   const login = async (email: string, password: string) => {

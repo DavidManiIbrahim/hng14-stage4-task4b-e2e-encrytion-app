@@ -1,8 +1,69 @@
 // In-memory database for demo purposes
+// With file-based persistence for server restarts
 // In production, use a real database like PostgreSQL, MongoDB, etc.
 
 import * as types from "@/lib/types";
 import crypto from "crypto";
+import * as fs from "fs";
+import * as path from "path";
+
+// Persistence paths
+const DB_DIR = path.join(process.cwd(), ".data");
+const USERS_FILE = path.join(DB_DIR, "users.json");
+const SESSIONS_FILE = path.join(DB_DIR, "sessions.json");
+const MESSAGES_FILE = path.join(DB_DIR, "messages.json");
+
+// Ensure data directory exists
+function ensureDataDir() {
+  if (!fs.existsSync(DB_DIR)) {
+    fs.mkdirSync(DB_DIR, { recursive: true });
+  }
+}
+
+// Load data from files
+function loadFromFiles() {
+  ensureDataDir();
+
+  if (fs.existsSync(USERS_FILE)) {
+    const data = JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+    for (const [key, value] of Object.entries(data)) {
+      users.set(key, value as StoredUserData);
+    }
+  }
+
+  if (fs.existsSync(SESSIONS_FILE)) {
+    const data = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8"));
+    for (const [key, value] of Object.entries(data)) {
+      sessions.set(key, value as { userId: string; expiresAt: number });
+    }
+  }
+
+  if (fs.existsSync(MESSAGES_FILE)) {
+    const data = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf-8"));
+    for (const [key, value] of Object.entries(data)) {
+      messages.set(key, value as StoredMessageData);
+    }
+  }
+}
+
+// Save data to files
+function saveUsers() {
+  ensureDataDir();
+  const data = Object.fromEntries(users);
+  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+}
+
+function saveSessions() {
+  ensureDataDir();
+  const data = Object.fromEntries(sessions);
+  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2));
+}
+
+function saveMessages() {
+  ensureDataDir();
+  const data = Object.fromEntries(messages);
+  fs.writeFileSync(MESSAGES_FILE, JSON.stringify(data, null, 2));
+}
 
 interface StoredUserData extends types.StoredUser {
   passwordHash: string;
@@ -14,6 +75,9 @@ interface StoredMessageData extends types.Message {}
 const users: Map<string, StoredUserData> = new Map();
 const messages: Map<string, StoredMessageData> = new Map();
 const sessions: Map<string, { userId: string; expiresAt: number }> = new Map();
+
+// Load persisted data on startup
+loadFromFiles();
 
 function generateToken(): string {
   return crypto.randomBytes(32).toString("hex");
@@ -49,12 +113,14 @@ export function registerUserInDb(
   };
 
   users.set(userId, user);
+  saveUsers();
 
   const token = generateToken();
   sessions.set(token, {
     userId,
     expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000, // 7 days
   });
+  saveSessions();
 
   const { passwordHash: _, ...userWithoutPassword } = user;
 
@@ -77,6 +143,7 @@ export function loginUserInDb(
         userId: user.id,
         expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
       });
+      saveSessions();
 
       const { passwordHash: _, ...userWithoutPassword } = user;
       return {
@@ -93,11 +160,16 @@ export function getUserFromToken(token: string): types.User | null {
   const session = sessions.get(token);
   if (!session || session.expiresAt < Date.now()) {
     sessions.delete(token);
+    saveSessions();
     return null;
   }
 
   const user = users.get(session.userId);
-  if (!user) return null;
+  if (!user) {
+    sessions.delete(token);
+    saveSessions();
+    return null;
+  }
 
   const { passwordHash: _, ...userWithoutPassword } = user;
   return userWithoutPassword;
@@ -140,6 +212,7 @@ export function updatePublicKeyInDb(
   if (!user) return false;
 
   user.publicKey = publicKey;
+  saveUsers();
   return true;
 }
 
@@ -163,6 +236,7 @@ export function storeMessage(
   };
 
   messages.set(messageId, message);
+  saveMessages();
   return message;
 }
 
@@ -188,6 +262,7 @@ export function markMessageAsRead(messageId: string): boolean {
   if (!message) return false;
 
   message.read = true;
+  saveMessages();
   return true;
 }
 
