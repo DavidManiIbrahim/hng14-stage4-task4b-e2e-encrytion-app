@@ -16,9 +16,7 @@ async function apiCall(
 ): Promise<any> {
   const { token, method = "GET", body } = options;
 
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-  };
+  const headers: Record<string, string> = {};
 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
@@ -30,13 +28,21 @@ async function apiCall(
   };
 
   if (body) {
+    headers["Content-Type"] = "application/json";
     config.body = JSON.stringify(body);
   }
 
-  const response = await fetch(`${BASE_URL}${endpoint}`, config);
+  let response: Response;
+  try {
+    response = await fetch(`${BASE_URL}${endpoint}`, config);
+  } catch (err) {
+    throw new Error(
+      err instanceof Error ? err.message : "Failed to fetch API endpoint"
+    );
+  }
 
   if (!response.ok) {
-    const error = await response.json();
+    const error = await response.json().catch(() => ({}));
     throw new Error(error.error || "API request failed");
   }
 

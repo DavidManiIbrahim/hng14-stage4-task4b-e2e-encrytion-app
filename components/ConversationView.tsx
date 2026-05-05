@@ -24,6 +24,11 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
     new Map()
   );
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const latestMessagesRef = useRef<DisplayedMessage[]>([]);
+
+  useEffect(() => {
+    latestMessagesRef.current = messages;
+  }, [messages]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -77,49 +82,59 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
 
         for (const msg of encryptedMessages) {
           try {
-            // Only decrypt if current user is the recipient
-            // (symmetric key was encrypted with recipient's public key)
-            if (msg.recipientId !== user.id) {
-              // This is a message we sent - we have the plaintext locally
-              // Skip decryption as the symmetric key was encrypted with recipient's public key
-              continue;
-            }
-
-            // Decrypt the symmetric key with our private key
-            const decryptedSymKeyBuffer = await crypto.decryptWithPrivateKey(
-              crypto.base64ToArrayBuffer(msg.encryptedSymmetricKey),
-              privateKey
-            );
-
-            // Import the symmetric key
-            const symmetricKey = await crypto.importSymmetricKey(
-              decryptedSymKeyBuffer
-            );
-
-            // Decrypt the message content
-            const decryptedContent = await crypto.decryptMessage(
-              msg.encryptedContent,
-              msg.encryptedContentIv,
-              symmetricKey
-            );
+            let decryptedContent: string;
+            let senderUsername: string;
 
             // Get sender info from cache
             const senderInfo = usersCache.get(msg.senderId);
+            senderUsername = senderInfo?.username || "Unknown";
+
+            if (msg.senderId === user.id) {
+              // This is a message we sent
+              // Check if we already have it in local state with plaintext
+              const existingMessage = latestMessagesRef.current.find(
+                (m) => m.id === msg.id
+              );
+              if (
+                existingMessage &&
+                existingMessage.content !== "[Failed to decrypt]" &&
+                existingMessage.content !== "[Sent message - content not available]"
+              ) {
+                // Use the existing plaintext content
+                decryptedContent = existingMessage.content;
+              } else {
+                // Can't decrypt sent messages - we don't have the recipient's private key
+                decryptedContent = "[Sent message - content not available]";
+              }
+            } else {
+              // This is a message sent to us - decrypt normally
+              const decryptedSymKeyBuffer = await crypto.decryptWithPrivateKey(
+                crypto.base64ToArrayBuffer(msg.encryptedSymmetricKey),
+                privateKey
+              );
+              const symmetricKey = await crypto.importSymmetricKey(decryptedSymKeyBuffer);
+              decryptedContent = await crypto.decryptMessage(
+                msg.encryptedContent,
+                msg.encryptedContentIv,
+                symmetricKey
+              );
+            }
 
             decrypted.push({
               id: msg.id,
               senderId: msg.senderId,
-              senderUsername: senderInfo?.username || "Unknown",
+              senderUsername: senderUsername,
               content: decryptedContent,
               timestamp: msg.timestamp,
               read: msg.read,
             });
           } catch (err) {
             console.error("Failed to decrypt message:", err);
+            const senderInfo = usersCache.get(msg.senderId);
             decrypted.push({
               id: msg.id,
               senderId: msg.senderId,
-              senderUsername: "Unknown",
+              senderUsername: senderInfo?.username || "Unknown",
               content: "[Failed to decrypt]",
               timestamp: msg.timestamp,
               read: msg.read,
@@ -127,7 +142,24 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
           }
         }
 
-        setMessages(decrypted.sort((a, b) => a.timestamp - b.timestamp));
+        // Merge fetched messages with local state and remove any duplicate IDs.
+        const mergedMessages = new Map<string, DisplayedMessage>();
+
+        // Preserve existing messages first, especially sent messages with plaintext content.
+        latestMessagesRef.current.forEach((msg) => {
+          mergedMessages.set(msg.id, msg);
+        });
+
+        // Add incoming decrypted messages only if they aren't already present.
+        decrypted.forEach((msg) => {
+          if (!mergedMessages.has(msg.id)) {
+            mergedMessages.set(msg.id, msg);
+          }
+        });
+
+        setMessages(
+          Array.from(mergedMessages.values()).sort((a, b) => a.timestamp - b.timestamp)
+        );
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : "Failed to load messages";
         setError(errorMessage);
@@ -172,7 +204,7 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
       );
 
       // Send encrypted message
-      await api.sendMessage(
+      const sendResponse = await api.sendMessage(
         token,
         selectedUserId,
         crypto.arrayBufferToBase64(encryptedSymKey),
@@ -180,17 +212,21 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
         iv
       );
 
-      // Add message to display
+      if (!sendResponse.message) {
+        throw new Error("Failed to send message");
+      }
+
+      // Add the sent message to local state immediately with plaintext content
       const newMessage: DisplayedMessage = {
-        id: Math.random().toString(36),
+        id: sendResponse.message.id,
         senderId: user.id,
         senderUsername: user.username,
-        content: messageText,
-        timestamp: Date.now(),
+        content: messageText, // Store plaintext for sent messages
+        timestamp: sendResponse.message.timestamp,
         read: true,
       };
 
-      setMessages([...messages, newMessage]);
+      setMessages(prevMessages => [...prevMessages, newMessage].sort((a, b) => a.timestamp - b.timestamp));
       setMessageText("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to send message");

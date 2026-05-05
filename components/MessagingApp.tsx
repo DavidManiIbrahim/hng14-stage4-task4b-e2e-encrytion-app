@@ -100,40 +100,8 @@ export function MessagingApp() {
 
         {/* Conversations and Users List */}
         <div className="flex-1 overflow-y-auto">
-          {/* Users Section */}
-          {searchQuery && (
-            <div className="p-4 border-b border-gray-200">
-              <h3 className="font-bold text-gray-700 mb-3 text-sm">Users</h3>
-              {isLoadingUsers ? (
-                <div className="text-center py-4 text-gray-500 text-sm">Loading...</div>
-              ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto">
-                  {users
-                    .filter(
-                      (u) =>
-                        u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        u.email.toLowerCase().includes(searchQuery.toLowerCase())
-                    )
-                    .map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          setSelectedUserId(u.id);
-                          setSearchQuery("");
-                        }}
-                        className="w-full text-left p-2 rounded-lg hover:bg-blue-50 border border-gray-200 transition-colors"
-                      >
-                        <p className="font-semibold text-sm text-gray-900">{u.username}</p>
-                        <p className="text-xs text-gray-500">{u.email}</p>
-                      </button>
-                    ))}
-                </div>
-              )}
-            </div>
-          )}
-
           {/* Conversations List */}
-          <div className="p-4">
+          <div className="p-4 border-b border-gray-200">
             <h3 className="font-bold text-gray-700 mb-3">Conversations</h3>
             {conversations.length === 0 ? (
               <p className="text-gray-500 text-sm">No conversations yet</p>
@@ -162,6 +130,37 @@ export function MessagingApp() {
                     )}
                   </button>
                 ))}
+              </div>
+            )}
+          </div>
+
+          {/* Users Section */}
+          <div className="p-4">
+            <h3 className="font-bold text-gray-700 mb-3 text-sm">Users</h3>
+            {isLoadingUsers ? (
+              <div className="text-center py-4 text-gray-500 text-sm">Loading...</div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {users
+                  .filter(
+                    (u) =>
+                      !searchQuery ||
+                      u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                      u.email.toLowerCase().includes(searchQuery.toLowerCase())
+                  )
+                  .map((u) => (
+                    <button
+                      key={u.id}
+                      onClick={() => {
+                        setSelectedUserId(u.id);
+                        setSearchQuery("");
+                      }}
+                      className="w-full text-left p-2 rounded-lg hover:bg-blue-50 border border-gray-200 transition-colors"
+                    >
+                      <p className="font-semibold text-sm text-gray-900">{u.username}</p>
+                      <p className="text-xs text-gray-500">{u.email}</p>
+                    </button>
+                  ))}
               </div>
             )}
           </div>
