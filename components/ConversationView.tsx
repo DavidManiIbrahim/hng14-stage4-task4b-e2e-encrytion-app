@@ -97,27 +97,17 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
               );
               if (
                 existingMessage &&
-                existingMessage.content !== "[Failed to decrypt]" &&
-                existingMessage.content !== "[Sent message - content not available]"
+                existingMessage.content !== "[Failed to decrypt]"
               ) {
                 // Use the existing plaintext content
                 decryptedContent = existingMessage.content;
               } else {
-                // Can't decrypt sent messages - we don't have the recipient's private key
-                decryptedContent = "[Sent message - content not available]";
+                // Decrypt our sent message using encryptedKeyForSelf
+                decryptedContent = await crypto.decryptMessagePayload(msg, privateKey, true);
               }
             } else {
-              // This is a message sent to us - decrypt normally
-              const decryptedSymKeyBuffer = await crypto.decryptWithPrivateKey(
-                crypto.base64ToArrayBuffer(msg.encryptedSymmetricKey),
-                privateKey
-              );
-              const symmetricKey = await crypto.importSymmetricKey(decryptedSymKeyBuffer);
-              decryptedContent = await crypto.decryptMessage(
-                msg.encryptedContent,
-                msg.encryptedContentIv,
-                symmetricKey
-              );
+              // This is a message sent to us - decrypt using encryptedKey
+              decryptedContent = await crypto.decryptMessagePayload(msg, privateKey, false);
             }
 
             decrypted.push({
@@ -185,31 +175,25 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
     setIsLoading(true);
 
     try {
-      // Get recipient's public key
+      // Get recipient's public key and sender's (our) public key
       const recipientPublicKey = await api.getUserPublicKey(selectedUserId);
+      const senderPublicKey = await api.getUserPublicKey(user.id);
 
-      // Generate a symmetric key
-      const symmetricKey = await crypto.generateSymmetricKey();
-
-      // Encrypt the message with symmetric key
-      const { ciphertext, iv } = await crypto.encryptMessage(messageText, symmetricKey);
-
-      // Export symmetric key to encrypt with recipient's public key
-      const symmetricKeyBuffer = await crypto.exportSymmetricKey(symmetricKey);
-
-      // Encrypt the symmetric key with recipient's public key
-      const encryptedSymKey = await crypto.encryptWithPublicKey(
-        symmetricKeyBuffer,
-        recipientPublicKey
+      // Use the new prepareMessagePayload orchestration function
+      const payload = await crypto.prepareMessagePayload(
+        messageText,
+        recipientPublicKey,
+        senderPublicKey
       );
 
-      // Send encrypted message
+      // Send encrypted message with new payload format
       const sendResponse = await api.sendMessage(
         token,
         selectedUserId,
-        crypto.arrayBufferToBase64(encryptedSymKey),
-        ciphertext,
-        iv
+        payload.ciphertext,
+        payload.iv,
+        payload.encryptedKey,
+        payload.encryptedKeyForSelf
       );
 
       if (!sendResponse.message) {
@@ -236,7 +220,15 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div
+      className="flex flex-col h-full"
+      style={{
+        backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd' stroke='%23d1d5db' stroke-width='0.5' opacity='0.3'%3E%3Ccircle cx='10' cy='10' r='3'/%3E%3Cline x1='20' y1='5' x2='25' y2='15'/%3E%3Cpath d='M30 20 Q35 25 30 30'/%3E%3Ccircle cx='45' cy='15' r='2'/%3E%3Cline x1='5' y1='35' x2='15' y2='40'/%3E%3Ccircle cx='50' cy='50' r='2.5'/%3E%3Cpath d='M15 50 Q20 45 25 50'/%3E%3C/g%3E%3C/svg%3E")`,
+        backgroundColor: '#f8fafc',
+        backgroundRepeat: 'repeat',
+        backgroundPosition: 'center',
+      }}
+    >
       {/* Header */}
       <div className="p-4 border-b border-gray-200 flex items-center justify-between bg-blue-50">
         <div>
