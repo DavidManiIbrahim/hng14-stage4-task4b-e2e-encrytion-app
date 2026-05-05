@@ -35,8 +35,9 @@ export async function generateKeyPair(): Promise<{
     keyPair.privateKey
   );
 
-  // Store private key in IndexedDB (never send to server)
-  await storePrivateKey(privateKeyJwk);
+  // Strip alg field to prevent conflicts with importKey algorithm parameter
+  delete publicKeyJwk.alg;
+  delete privateKeyJwk.alg;
 
   return {
     publicKey: publicKeyJwk,
@@ -119,9 +120,10 @@ export async function encryptWithPublicKey(
   data: ArrayBuffer,
   publicKeyJwk: JsonWebKey
 ): Promise<ArrayBuffer> {
+  const { alg, ...jwkWithoutAlg } = publicKeyJwk;
   const publicKey = await window.crypto.subtle.importKey(
     "jwk",
-    publicKeyJwk,
+    jwkWithoutAlg,
     ALGORITHM,
     false,
     ["encrypt"]
@@ -137,9 +139,10 @@ export async function decryptWithPrivateKey(
   encryptedData: ArrayBuffer,
   privateKeyJwk: JsonWebKey
 ): Promise<ArrayBuffer> {
+  const { alg, ...jwkWithoutAlg } = privateKeyJwk;
   const privateKey = await window.crypto.subtle.importKey(
     "jwk",
-    privateKeyJwk,
+    jwkWithoutAlg,
     ALGORITHM,
     false,
     ["decrypt"]
@@ -265,4 +268,253 @@ export async function hashData(data: string): Promise<string> {
     encoder.encode(data)
   );
   return arrayBufferToBase64(hash);
+}
+
+/**
+ * Prepare an encrypted message payload for transmission
+ *
+ * Encryption Flow:
+ * 1. Generate a fresh AES-256-GCM symmetric key for this message
+ * 2. Encrypt the plaintext message using AES-GCM (produces ciphertext + IV)
+ * 3. Export the raw symmetric key bytes
+ * 4. Wrap the symmetric key with recipient's RSA public key → encryptedKey
+ * 5. Wrap the symmetric key with sender's RSA public key → encryptedKeyForSelf
+ * 6. Return complete payload with both encrypted keys (recipient and sender can both decrypt)
+ *
+ * @param plaintext - The message text to encrypt
+ * @param recipientPublicKeyJwk - Recipient's RSA public key (JsonWebKey format)
+ * @param senderPublicKeyJwk - Sender's RSA public key (JsonWebKey format)
+ * @returns Payload object with ciphertext, iv, and RSA-wrapped keys for both parties
+ */
+export async function prepareMessagePayload(
+  plaintext: string,
+  recipientPublicKeyJwk: JsonWebKey,
+  senderPublicKeyJwk: JsonWebKey
+): Promise<{
+  ciphertext: string;
+  iv: string;
+  encryptedKey: string;
+  encryptedKeyForSelf: string;
+}> {
+  // Generate a fresh symmetric key for this message
+  const symmetricKey = await generateSymmetricKey();
+
+  // Encrypt the plaintext using AES-GCM
+  const { ciphertext, iv } = await encryptMessage(plaintext, symmetricKey);
+
+  // Export the symmetric key in raw format
+  const rawKeyData = await exportSymmetricKey(symmetricKey);
+
+  // RSA-OAEP wrap the key for the recipient
+  const encryptedKeyBuffer = await encryptWithPublicKey(
+    rawKeyData,
+    recipientPublicKeyJwk
+  );
+  const encryptedKey = arrayBufferToBase64(encryptedKeyBuffer);
+
+  // RSA-OAEP wrap the key for the sender (for message history decryption)
+  const encryptedKeyForSelfBuffer = await encryptWithPublicKey(
+    rawKeyData,
+    senderPublicKeyJwk
+  );
+  const encryptedKeyForSelf = arrayBufferToBase64(encryptedKeyForSelfBuffer);
+
+  return {
+    ciphertext,
+    iv,
+    encryptedKey,
+    encryptedKeyForSelf,
+  };
+}
+
+/**
+ * Decrypt an incoming encrypted message payload
+ *
+ * Decryption Flow:
+ * 1. Select the correct RSA-wrapped key based on whether this is sender or recipient
+ * 2. RSA-OAEP unwrap the symmetric key using the provided private key
+ * 3. Import the unwrapped raw key as a CryptoKey
+ * 4. AES-GCM decrypt the ciphertext using the symmetric key and IV
+ * 5. Return the plaintext message
+ *
+ * @param payload - The encrypted message payload from the API
+ * @param privateKeyJwk - The user's RSA private key (JsonWebKey format)
+ * @param isSender - If true, decrypt using encryptedKeyForSelf; if false, use encryptedKey
+ * @returns The decrypted plaintext message
+ * @throws Error if decryption fails (possible tampering or key mismatch)
+ */
+export async function decryptMessagePayload(
+  payload: {
+    ciphertext: string;
+    iv: string;
+    encryptedKey: string;
+    encryptedKeyForSelf: string;
+  },
+  privateKeyJwk: JsonWebKey,
+  isSender: boolean
+): Promise<string> {
+  try {
+    // Select the appropriate encrypted key based on user's role
+    const encryptedKeyB64 = isSender ? payload.encryptedKeyForSelf : payload.encryptedKey;
+    const encryptedKeyBuffer = base64ToArrayBuffer(encryptedKeyB64);
+
+    // RSA-OAEP unwrap the symmetric key
+    const rawKeyData = await decryptWithPrivateKey(
+      encryptedKeyBuffer,
+      privateKeyJwk
+    );
+
+    // Import the unwrapped key back into a CryptoKey
+    const symmetricKey = await importSymmetricKey(rawKeyData);
+
+    // AES-GCM decrypt the message
+    const plaintext = await decryptMessage(
+      payload.ciphertext,
+      payload.iv,
+      symmetricKey
+    );
+
+    return plaintext;
+  } catch (error) {
+    throw new Error(
+      `Failed to decrypt message payload: ${error instanceof Error ? error.message : "Unknown error"}. ` +
+      "This may indicate the message was tampered with or you lack the decryption key."
+    );
+  }
+}
+
+/**
+ * Fetch and decrypt all messages from all conversations
+ *
+ * Process Flow:
+ * 1. Retrieve private key from IndexedDB if not provided
+ * 2. Fetch all conversations from GET /conversations
+ * 3. For each conversation, fetch message history from GET /conversations/{id}/messages
+ * 4. For each message, determine if current user is the sender
+ * 5. Decrypt each message using decryptMessagePayload()
+ * 6. If decryption fails, mark the message with decryptionFailed: true and continue
+ * 7. Return all messages sorted by created_at ascending (oldest first)
+ *
+ * @param currentUserId - The UUID of the current user
+ * @param privateKeyJwk - Optional: the user's RSA private key (will fetch from IndexedDB if not provided)
+ * @returns Array of decrypted message objects with plaintext and decryption status
+ * @throws Error if unable to retrieve private key or fetch conversations
+ */
+export async function receiveMessages(
+  currentUserId: string,
+  privateKeyJwk?: JsonWebKey
+): Promise<
+  Array<{
+    id: string;
+    sender_id: string;
+    created_at: string;
+    plaintext: string;
+    decryptionFailed: boolean;
+  }>
+> {
+  // Retrieve private key from IndexedDB if not provided
+  let key = privateKeyJwk;
+  if (!key) {
+    key = await getPrivateKey(currentUserId);
+    if (!key) {
+      throw new Error(
+        `Unable to retrieve private key for user ${currentUserId}. Key may not be stored in IndexedDB.`
+      );
+    }
+  }
+
+  // Fetch all conversations
+  const conversationsResponse = await fetch("/api/conversations");
+  if (!conversationsResponse.ok) {
+    throw new Error(
+      `Failed to fetch conversations: ${conversationsResponse.status} ${conversationsResponse.statusText}`
+    );
+  }
+  const conversations: Array<{ id: string }> = await conversationsResponse.json();
+
+  const allMessages: Array<{
+    id: string;
+    sender_id: string;
+    created_at: string;
+    plaintext: string;
+    decryptionFailed: boolean;
+  }> = [];
+
+  // Fetch and decrypt messages from each conversation
+  for (const conversation of conversations) {
+    try {
+      const messagesResponse = await fetch(
+        `/api/conversations/${conversation.id}/messages`
+      );
+
+      if (!messagesResponse.ok) {
+        console.warn(
+          `Failed to fetch messages for conversation ${conversation.id}: ${messagesResponse.status}`
+        );
+        continue;
+      }
+
+      const messages: Array<{
+        id: string;
+        sender_id: string;
+        created_at: string;
+        payload: {
+          ciphertext: string;
+          iv: string;
+          encryptedKey: string;
+          encryptedKeyForSelf: string;
+        };
+      }> = await messagesResponse.json();
+
+      // Decrypt each message
+      for (const message of messages) {
+        const isSender = message.sender_id === currentUserId;
+
+        try {
+          const plaintext = await decryptMessagePayload(
+            message.payload,
+            key,
+            isSender
+          );
+
+          allMessages.push({
+            id: message.id,
+            sender_id: message.sender_id,
+            created_at: message.created_at,
+            plaintext,
+            decryptionFailed: false,
+          });
+        } catch (decryptError) {
+          // Log the error but continue processing other messages
+          console.error(
+            `Failed to decrypt message ${message.id} from conversation ${conversation.id}:`,
+            decryptError
+          );
+
+          allMessages.push({
+            id: message.id,
+            sender_id: message.sender_id,
+            created_at: message.created_at,
+            plaintext: "",
+            decryptionFailed: true,
+          });
+        }
+      }
+    } catch (conversationError) {
+      console.error(
+        `Error processing conversation ${conversation.id}:`,
+        conversationError
+      );
+      // Continue to next conversation instead of crashing
+      continue;
+    }
+  }
+
+  // Sort messages by created_at ascending (oldest first)
+  allMessages.sort(
+    (a, b) =>
+      new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+
+  return allMessages;
 }

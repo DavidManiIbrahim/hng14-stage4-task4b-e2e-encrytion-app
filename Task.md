@@ -70,8 +70,7 @@ Never access plaintext
 Only store encrypted blobs
 
 
-:four: Encryption Requirements
-Use:
+ Encryption Requirements Use:
 
 Web Crypto API (recommended)
 AES-GCM for symmetric encryption
@@ -82,7 +81,7 @@ Store raw private keys in plain text
 Hardcode keys
 
 
-:shield: Security Expectations
+ Security Expectations
 
 No sensitive data in localStorage (unless encrypted)
 Use HTTPS
@@ -92,7 +91,7 @@ Consider replay attacks (bonus)
 Consider forward secrecy (bonus)
 
 
-:iphone: UI/UX Requirements
+ UI/UX Requirements
 
 Clean secure messaging UI
 Clear encrypted indicator
@@ -102,7 +101,7 @@ Device compatibility
 No AI slop, take UI inspiration from any popular messaging application
 
 
-:test_tube: Evaluation Criteria
+ Evaluation Criteria
 
 Encryption correctly implemented
 Server cannot read plaintext
@@ -113,12 +112,12 @@ Collaboration clarity
 Documentation quality
 
 
-:computer: API
+ API
 Base url: https://whisperbox.koyeb.app/
 Docs: https://whisperbox.koyeb.app/docs#
 Implementation Guide
 
-:package: Submission Requirements
+ Submission Requirements
 
 Live demo/Interview
 GitHub repository

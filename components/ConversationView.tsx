@@ -71,10 +71,10 @@ export function ConversationView({ selectedUserId }: ConversationViewProps) {
     const loadMessages = async () => {
       try {
         const encryptedMessages = await api.getConversation(token, selectedUserId);
-        const privateKey = await crypto.getPrivateKey();
+        const privateKey = await crypto.getPrivateKey(user.id);
 
         if (!privateKey) {
-          setError("Private key not found. Cannot decrypt messages.");
+          setError("Private key not found for this user. Cannot decrypt messages.");
           return;
         }
 

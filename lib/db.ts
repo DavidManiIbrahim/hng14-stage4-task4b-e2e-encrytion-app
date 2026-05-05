@@ -24,45 +24,75 @@ function ensureDataDir() {
 function loadFromFiles() {
   ensureDataDir();
 
+  // Load users
   if (fs.existsSync(USERS_FILE)) {
-    const data = JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
-    for (const [key, value] of Object.entries(data)) {
-      users.set(key, value as StoredUserData);
+    try {
+      const data = JSON.parse(fs.readFileSync(USERS_FILE, "utf-8"));
+      for (const [key, value] of Object.entries(data)) {
+        users.set(key, value as StoredUserData);
+      }
+    } catch (error) {
+      console.error("Failed to load users.json:", error);
+      // Continue with empty users map
     }
   }
 
+  // Load sessions
   if (fs.existsSync(SESSIONS_FILE)) {
-    const data = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8"));
-    for (const [key, value] of Object.entries(data)) {
-      sessions.set(key, value as { userId: string; expiresAt: number });
+    try {
+      const data = JSON.parse(fs.readFileSync(SESSIONS_FILE, "utf-8"));
+      for (const [key, value] of Object.entries(data)) {
+        sessions.set(key, value as { userId: string; expiresAt: number });
+      }
+    } catch (error) {
+      console.error("Failed to load sessions.json:", error);
+      // Continue with empty sessions map
     }
   }
 
+  // Load messages
   if (fs.existsSync(MESSAGES_FILE)) {
-    const data = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf-8"));
-    for (const [key, value] of Object.entries(data)) {
-      messages.set(key, value as StoredMessageData);
+    try {
+      const data = JSON.parse(fs.readFileSync(MESSAGES_FILE, "utf-8"));
+      for (const [key, value] of Object.entries(data)) {
+        messages.set(key, value as StoredMessageData);
+      }
+    } catch (error) {
+      console.error("Failed to load messages.json:", error);
+      // Continue with empty messages map
     }
   }
 }
 
 // Save data to files
 function saveUsers() {
-  ensureDataDir();
-  const data = Object.fromEntries(users);
-  fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+  try {
+    ensureDataDir();
+    const data = Object.fromEntries(users);
+    fs.writeFileSync(USERS_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("Failed to save users.json:", error);
+  }
 }
 
 function saveSessions() {
-  ensureDataDir();
-  const data = Object.fromEntries(sessions);
-  fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2));
+  try {
+    ensureDataDir();
+    const data = Object.fromEntries(sessions);
+    fs.writeFileSync(SESSIONS_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("Failed to save sessions.json:", error);
+  }
 }
 
 function saveMessages() {
-  ensureDataDir();
-  const data = Object.fromEntries(messages);
-  fs.writeFileSync(MESSAGES_FILE, JSON.stringify(data, null, 2));
+  try {
+    ensureDataDir();
+    const data = Object.fromEntries(messages);
+    fs.writeFileSync(MESSAGES_FILE, JSON.stringify(data, null, 2));
+  } catch (error) {
+    console.error("Failed to save messages.json:", error);
+  }
 }
 
 interface StoredUserData extends types.StoredUser {
@@ -219,18 +249,20 @@ export function updatePublicKeyInDb(
 export function storeMessage(
   senderId: string,
   recipientId: string,
-  encryptedSymmetricKey: string,
-  encryptedContent: string,
-  encryptedContentIv: string
+  ciphertext: string,
+  iv: string,
+  encryptedKey: string,
+  encryptedKeyForSelf: string
 ): types.Message {
   const messageId = crypto.randomUUID();
   const message: StoredMessageData = {
     id: messageId,
     senderId,
     recipientId,
-    encryptedSymmetricKey,
-    encryptedContent,
-    encryptedContentIv,
+    ciphertext,
+    iv,
+    encryptedKey,
+    encryptedKeyForSelf,
     timestamp: Date.now(),
     read: false,
   };

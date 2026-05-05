@@ -32,5 +32,21 @@
     },
     "passwordHash": "c775e7b757ede630cd0aa1113bd102661ab38829ca52a6422ab782862f268646",
     "createdAt": 1777947171219
+  },
+  "2a7ae86b-b976-4878-914c-74e13ba892ad": {
+    "id": "2a7ae86b-b976-4878-914c-74e13ba892ad",
+    "username": "testuser",
+    "email": "testuser@example.com",
+    "publicKey": {
+      "e": "AQAB",
+      "ext": true,
+      "key_ops": [
+        "encrypt"
+      ],
+      "kty": "RSA",
+      "n": "wHy3fmlftLSxxMj-i46JaZI3nIKFMU8vS-yld1cigEo95atS-3ReW1Ba_afW7aoGlQCy5XVqBB4Jvh1li7q8uLaPKZl4q0x_PKJJoB_Lv37WPlpptYK6N-8ZbvmHvr9118LMk-o7iUtak8HrXr3wrkkpHgWXQ5ed2z_HpBD2DGYjuaWzCjLpg9aYMb7zvUQ2X_eMsx83LgCQY5uX88oCdmEF8FfPfP5Wxwhv64WckxlEjSMC2EXkx98hAMvoyR3XQQV79LrVC5mIMdUuxYQnja1qTFkmqYpyrhvXNF4QIsPp4dNfVU17GSGhGzGUjSEgfiMb0KV_Ukz1SSEziABqp8iC4u2Ue9tAYvXh9sdaf58EfSd5be5UyPQb_0eCVSgD8QHL_oqjLmNre0plw89h0xvACkGRX0lXxvV2KIPQO1Wvv3IEMw-UAy6d6dJIWdzNRWcmsGzLKEeoTAxV_q0Sfp_MbJPTZIkCqEyNwFbjh21D3dWoScwWmG7hquccntKX6SUc1uxt5V-kuKwgHs8DWh0gbFrFvwNwG-NS-zweLypQQg1jOXAtzOm23nMSueHCpKbUCxrvVGVUjvR1uz-GFcT_U_vj0xTWUsBIow1F164-ZsXvFDkXhfuCgV6E1KBNbyAtl0ROqjQdd29jk8wLO_NnwF__xld8bz1-p6MsVzU"
+    },
+    "passwordHash": "7e6e0c3079a08c5cc6036789b57e951f65f82383913ba1a49ae992544f1b4b6e",
+    "createdAt": 1777976233548
   }
 }

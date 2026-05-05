@@ -98,18 +98,20 @@ export async function updatePublicKey(
 export async function sendMessage(
   token: string,
   recipientId: string,
-  encryptedSymmetricKey: string,
-  encryptedContent: string,
-  encryptedContentIv: string
+  ciphertext: string,
+  iv: string,
+  encryptedKey: string,
+  encryptedKeyForSelf: string
 ): Promise<types.MessageResponse> {
   return apiCall("/messages/send", {
     token,
     method: "POST",
     body: {
       recipientId,
-      encryptedSymmetricKey,
-      encryptedContent,
-      encryptedContentIv,
+      ciphertext,
+      iv,
+      encryptedKey,
+      encryptedKeyForSelf,
     },
   });
 }

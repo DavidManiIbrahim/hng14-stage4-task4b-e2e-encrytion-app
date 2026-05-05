@@ -14,7 +14,7 @@ interface AuthContextType {
     email: string,
     password: string,
     publicKey: JsonWebKey
-  ) => Promise<void>;
+  ) => Promise<types.User>;
   logout: () => void;
   setUser: (user: types.User | null) => void;
   setToken: (token: string | null) => void;
@@ -116,6 +116,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.setItem("auth_token", data.token);
     localStorage.setItem("auth_user", JSON.stringify(data.user));
+
+    return data.user;
   };
 
   const logout = useCallback(() => {

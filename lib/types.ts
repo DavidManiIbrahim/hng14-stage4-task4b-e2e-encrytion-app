@@ -16,9 +16,10 @@ export interface Message {
   id: string;
   senderId: string;
   recipientId: string;
-  encryptedSymmetricKey: string; // RSA-encrypted symmetric key
-  encryptedContent: string; // AES-encrypted message
-  encryptedContentIv: string; // IV for AES
+  ciphertext: string; // AES-256-GCM encrypted message
+  iv: string; // 96-bit IV for AES-GCM
+  encryptedKey: string; // RSA-OAEP wrapped key for recipient
+  encryptedKeyForSelf: string; // RSA-OAEP wrapped key for sender (allows sender to view sent messages)
   timestamp: number;
   read: boolean;
 }

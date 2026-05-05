@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Mail, Lock, UserPlus } from "lucide-react";
 import { useAuth } from "./AuthContext";
+import * as crypto from "@/lib/crypto";
 import { generateKeyPair } from "@/lib/crypto";
 
 interface RegisterFormProps {
@@ -36,10 +37,13 @@ export function RegisterForm({ onSwitchToLogin }: RegisterFormProps) {
 
     try {
       // Generate RSA key pair
-      const { publicKey } = await generateKeyPair();
+      const { publicKey, privateKey } = await generateKeyPair();
 
       // Register with public key
-      await register(username, email, password, publicKey);
+      const user = await register(username, email, password, publicKey);
+
+      // Store private key under the user ID so decrypt works for this account
+      await crypto.storePrivateKey(privateKey, user.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed");
     } finally {

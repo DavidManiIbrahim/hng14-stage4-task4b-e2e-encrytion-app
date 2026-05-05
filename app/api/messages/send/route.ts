@@ -24,16 +24,18 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const {
       recipientId,
-      encryptedSymmetricKey,
-      encryptedContent,
-      encryptedContentIv,
+      ciphertext,
+      iv,
+      encryptedKey,
+      encryptedKeyForSelf,
     } = body;
 
     if (
       !recipientId ||
-      !encryptedSymmetricKey ||
-      !encryptedContent ||
-      !encryptedContentIv
+      !ciphertext ||
+      !iv ||
+      !encryptedKey ||
+      !encryptedKeyForSelf
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
@@ -44,9 +46,10 @@ export async function POST(request: NextRequest) {
     const message = storeMessage(
       user.id,
       recipientId,
-      encryptedSymmetricKey,
-      encryptedContent,
-      encryptedContentIv
+      ciphertext,
+      iv,
+      encryptedKey,
+      encryptedKeyForSelf
     );
 
     return NextResponse.json({

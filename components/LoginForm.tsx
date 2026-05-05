@@ -3,7 +3,6 @@
 import React, { useState } from "react";
 import { Mail, Lock, LogIn } from "lucide-react";
 import { useAuth } from "./AuthContext";
-import { generateKeyPair } from "@/lib/crypto";
 
 interface LoginFormProps {
   onSwitchToRegister: () => void;

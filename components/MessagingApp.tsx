@@ -73,7 +73,7 @@ export function MessagingApp() {
   return (
     <div className="flex h-full bg-gray-100">
       {/* Sidebar */}
-      <div className="w-1/4 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-1/4 bg-white border-gray-200 flex flex-col">
         <div className="p-4 border-b border-gray-200">
           <div>
             <p className="font-bold text-gray-900">{user.username}</p>
@@ -116,7 +116,7 @@ export function MessagingApp() {
                     }}
                     className={`w-full text-left p-3 rounded-lg transition-colors ${
                       selectedUserId === conv.otherUserId
-                        ? "bg-blue-100 border-l-4 border-blue-500"
+                        ? "bg-blue-100 "
                         : "hover:bg-gray-100"
                     }`}
                   >
@@ -191,6 +191,7 @@ export function MessagingApp() {
             }}
           >
             <div className="text-center">
+              <img className="mx-auto mb-4 w-40 h-40" src="/e2e.png" alt="Chat Icon" />
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
                 Secure Messaging
               </h2>
